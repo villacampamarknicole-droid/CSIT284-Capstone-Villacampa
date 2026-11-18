@@ -1,18 +1,13 @@
 import 'package:flutter/material.dart';
-import 'screens/home_screen.dart';
+import 'package:capstone_villacampa/screens/home_screen.dart';
 
 void main() {
   runApp(const LostAndFoundApp());
 }
 
-class LostAndFoundApp extends StatefulWidget {
+class LostAndFoundApp extends StatelessWidget {
   const LostAndFoundApp({Key? key}) : super(key: key);
 
-  @override
-  State<LostAndFoundApp> createState() => _LostAndFoundAppState();
-}
-
-class _LostAndFoundAppState extends State<LostAndFoundApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
