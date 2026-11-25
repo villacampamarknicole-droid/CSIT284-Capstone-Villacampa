@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:capstone_villacampa/models/items.dart';
+import '../models/items.dart';
 
 class ItemCard extends StatelessWidget {
   final Item item;
   final VoidCallback onTap;
 
-  const ItemCard({Key? key, required this.item, required this.onTap}) : super(key: key);
+  const ItemCard({super.key, required this.item, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
