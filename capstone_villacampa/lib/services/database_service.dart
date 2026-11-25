@@ -1,81 +1,85 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:capstone_villacampa/models/items.dart';
 
 class DatabaseService {
-  final DatabaseReference _itemsRef = FirebaseDatabase.instanceFor(
-    app: Firebase.app(),
-    databaseURL:
-        'https://capstone-32782-default-rtdb.asia-southeast1.firebasedatabase.app',
-  ).ref('items');
+  final DatabaseReference _db = FirebaseDatabase.instance.ref();
+
+  DatabaseReference get _itemsRef => _db.child('items');
+  DatabaseReference get _claimedItemsRef => _db.child('claimed_items');
 
   Stream<List<Item>> watchItems() {
     return _itemsRef.onValue.map((event) {
-      final value = event.snapshot.value;
-      if (value == null) {
-        return <Item>[];
-      }
+      final raw = event.snapshot.value;
+      if (raw == null) return <Item>[];
 
-      final items = <Item>[];
-
-      if (value is Map) {
-        value.forEach((key, rawData) {
-          if (rawData is Map) {
-            items.add(Item.fromMap(key.toString(), rawData));
+      final List<Item> items = [];
+      if (raw is Map) {
+        raw.forEach((key, value) {
+          if (value is Map) {
+            final map = Map<String, dynamic>.from(value);
+            items.add(Item.fromMap(key.toString(), map));
           }
         });
-      } else if (value is List) {
-        for (var i = 0; i < value.length; i++) {
-          final rawData = value[i];
-          if (rawData is Map) {
-            items.add(Item.fromMap(i.toString(), rawData));
+      } else if (raw is List) {
+        for (var i = 0; i < raw.length; i++) {
+          final value = raw[i];
+          if (value is Map) {
+            final map = Map<String, dynamic>.from(value);
+            items.add(Item.fromMap(i.toString(), map));
           }
         }
       }
 
-      items.sort((a, b) {
-        final intA = int.tryParse(a.id);
-        final intB = int.tryParse(b.id);
-        if (intA != null && intB != null) {
-          return intA.compareTo(intB);
-        }
-        return a.id.compareTo(b.id);
-      });
+      return items.where((item) => !item.isClaimed).toList();
+    });
+  }
 
-      return items;
+  Stream<List<Item>> watchClaimedItems() {
+    return _claimedItemsRef.onValue.map((event) {
+      final raw = event.snapshot.value;
+      if (raw == null) return <Item>[];
+
+      final List<Item> claimed = [];
+      if (raw is Map) {
+        raw.forEach((key, value) {
+          if (value is Map) {
+            final map = Map<String, dynamic>.from(value);
+            claimed.add(Item.fromMap(key.toString(), map));
+          }
+        });
+      } else if (raw is List) {
+        for (var i = 0; i < raw.length; i++) {
+          final value = raw[i];
+          if (value is Map) {
+            final map = Map<String, dynamic>.from(value);
+            claimed.add(Item.fromMap(i.toString(), map));
+          }
+        }
+      }
+
+      return claimed;
     });
   }
 
   Future<void> addItem(Item item) async {
-    final newRef =
-        item.id.isNotEmpty ? _itemsRef.child(item.id) : _itemsRef.push();
-    await newRef.set(item.toMap());
+    await _itemsRef.child(item.id).set(item.toMap());
   }
 
-  Future<void> updateItem(Item item) async {
-    await _itemsRef.child(item.id).update(item.toMap());
-  }
+  Future<void> markItemAsClaimed(Item item) async {
+    final claimedMap = item.toMap();
+    claimedMap['isClaimed'] = true;
+    claimedMap['claimedAt'] = DateTime.now().toIso8601String();
 
-  Future<void> setClaimed(String itemId, bool isClaimed) async {
-    await _itemsRef.child(itemId).update({'isClaimed': isClaimed});
-  }
-
-  Future<void> deleteItem(String itemId) async {
-    await _itemsRef.child(itemId).remove();
+    await _claimedItemsRef.child(item.id).set(claimedMap);
+    await _itemsRef.child(item.id).remove();
   }
 
   Future<void> seedInitialItems(List<Item> initialItems) async {
-    try {
-      final snapshot = await _itemsRef.get();
-      if (snapshot.exists && snapshot.value != null) {
-        return;
-      }
-      final Map<String, dynamic> payload = {
-        for (final item in initialItems) item.id: item.toMap(),
-      };
-      await _itemsRef.set(payload);
-    } catch (e) {
-      print('Seed error: $e');
+    final snapshot = await _itemsRef.get();
+    if (snapshot.exists) return;
+
+    for (final item in initialItems) {
+      await _itemsRef.child(item.id).set(item.toMap());
     }
   }
 }
