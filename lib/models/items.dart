@@ -16,4 +16,27 @@ class Item {
     required this.category,
     this.isClaimed = false,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'title': title,
+      'description': description,
+      'location': location,
+      'contact': contact,
+      'category': category,
+      'isClaimed': isClaimed,
+    };
+  }
+
+  factory Item.fromMap(String id, Map<dynamic, dynamic> map) {
+    return Item(
+      id: id,
+      title: map['title']?.toString() ?? '',
+      description: map['description']?.toString() ?? '',
+      location: map['location']?.toString() ?? '',
+      contact: map['contact']?.toString() ?? '',
+      category: map['category']?.toString() ?? '',
+      isClaimed: map['isClaimed'] == true,
+    );
+  }
 }
